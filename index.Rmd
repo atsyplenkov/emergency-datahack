@@ -200,11 +200,32 @@ tm_shape(ws,
 .panel[.panel-name[Гидро]
 .pull-left[
 
-- В качестве гидрологических предикторов был использован максимальные суточные уровни воды `stage_max` за предыдущие 10 дней.
+- В качестве гидрологических предикторов был использован максимальные суточные уровни воды `stage_max` .
+
+- На графике представлена корреляционная матрица (коэффициент корреляции Пирсона) максимального уровня воды `stage_max`
+
 
 ]
 .pull-right[
-![](figs/lucma_landslides_rain_egu.png)
+![](figs/corplot.png)
 ]
 ]
 ]
+
+---
+
+### Выбор модели
+
+Выбранная модель — `LSTM` (*Долгая краткосрочная память*) — разновидность рекуррентной нейронной сети.
+
+Выбранные параметры настройки:
+
+```{python, echo = T}
+past_history = 60 # how many instances a model sees for training, in compliance with other models' input
+future_target = 7 # how many instances form a prediction step
+STEP = 1 # step size - 1 for daily data
+BATCH_SIZE = 30 
+BUFFER_SIZE = 1000
+EPOCHS = 100 # how many times a model sees the data
+```
+

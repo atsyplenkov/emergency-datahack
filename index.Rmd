@@ -229,3 +229,105 @@ BUFFER_SIZE = 1000
 EPOCHS = 100 # how many times a model sees the data
 ```
 
+---
+
+### Результаты
+
+```{r metrics}
+library(tidyverse)
+library(lubridate)
+library(hydroGOF)
+library(lubridate)
+
+score <- read_csv("data/tidy/score_df.csv")
+
+station_coef <- tibble::tribble(
+    ~index,                 ~sigma,
+  3019L,    185.357077524267,
+  3027L,    1223.80716165779,
+  3028L,    1357.40628129894,
+  3029L,    1520.77301618707,
+  3030L,    1765.92179049961,
+  3035L,    765.370383263204,
+  3041L,    443.576693400672,
+  3045L,    579.135355401756,
+  3050L,    612.047123856108,
+  3230L,         516.6669876
+  )
+
+polovodey <- score %>% 
+  filter(between(yday(date), 110, 167)) %>%
+  group_by(index) %>% 
+  summarise(NSE = NSE(sim = pred_delta,
+                      obs = fact_delta),
+            RMSE = rmse(sim = pred_delta,
+                       obs = fact_delta),
+            mse = mse(sim = pred_delta,
+                      obs = fact_delta)) %>% 
+  left_join(station_coef,
+            by = "index") %>% 
+  mutate(score = mse/sigma) %>% 
+  mutate(period = "21 апр. - 15 июня")
+  
+year <- score %>% 
+  # filter(between(yday(date), 110, 138)) %>%
+  group_by(index) %>% 
+  summarise(NSE = NSE(sim = pred_delta,
+                      obs = fact_delta),
+            RMSE = rmse(sim = pred_delta,
+                      obs = fact_delta),
+            mse = mse(sim = pred_delta,
+                      obs = fact_delta)) %>% 
+  left_join(station_coef,
+            by = "index") %>% 
+  mutate(score = mse/sigma) %>% 
+  mutate(period = "Весь год")
+
+bind_rows(polovodey, year) %>% 
+  dplyr::select(-sigma, -mse) %>% 
+  gather(metric, val, -index, -period) %>%
+  mutate(index = as_factor(index)) %>% 
+  ggplot(aes(x = index,
+             y = val,
+             fill = period)) +
+  geom_col(position = "dodge") +
+  coord_flip() +
+  facet_wrap(~metric,
+             scales = "free") +
+  labs(x = NULL, y = NULL, color = NULL) +
+  ggtitle("Метрика для delta_score_max") +
+  see::scale_fill_metro() +
+  theme(legend.position = "bottom")
+
+
+```
+
+---
+
+### Результаты
+
+```{r max_lev}
+score %>% 
+  filter(between(yday(date), 110, 167)) %>% 
+  mutate(year = year(date)) %>% 
+  group_by(index, year) %>% 
+  summarise(max_fact = max(fact, na.rm = T),
+            max_pred1 = max(pred_1, na.rm = T)) %>% 
+  ggplot(aes(x = max_fact, y = max_pred1)) +
+  geom_point() +
+  scale_x_log10() +
+  scale_y_log10() +
+  ggpmisc::stat_poly_eq(aes(label =  paste(stat(rr.label),
+                                           sep = "~~~~")),
+                        formula = y~x,
+                        rr.digits = 2,
+                        parse = TRUE) +
+  facet_wrap(~index,
+             scales = "free") +
+  labs(y = "Модель", x = "Факт", title = "Связь между фактом и предсказанием макс. уровня воды")
+
+
+```
+
+
+
